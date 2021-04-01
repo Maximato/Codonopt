@@ -1,0 +1,2 @@
+taxid: 562
+organism: test_ecoli2
