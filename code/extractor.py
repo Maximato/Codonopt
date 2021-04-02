@@ -1,6 +1,6 @@
 from os.path import join
 
-from config import DB_COLUMN_DELIMITER, DB_DIR
+from config import DB_COLUMN_DELIMITER, DB_TAXID_INDEX, DB_DIR
 
 
 def extract_db_frequencies(taxid: str or int, db_path: str, frequency_col_from: int) -> dict:
@@ -18,7 +18,7 @@ def extract_db_frequencies(taxid: str or int, db_path: str, frequency_col_from: 
         frequencies = {codon: 0 for codon in key_order}
         for line in f:
             row = line.split(DB_COLUMN_DELIMITER)
-            db_taxid = row[2]
+            db_taxid = row[DB_TAXID_INDEX]
             if db_taxid == taxid:
                 for codon, frequency in zip(key_order, row[frequency_col_from:]):
                     frequencies[codon] += int(frequency)
@@ -30,7 +30,7 @@ def extract_codonopt_data(filename) -> (str, float, list):
     Extracting information for running optimization
 
     :param filename: path to filename
-    :return: organism, threshold, proteins sequences
+    :return: fitness values, Codon Pair Score (CPS) table, threshold CAI, sequences
     """
     with open(filename, "r") as r:
         organism = r.readline().split()[1]
@@ -40,7 +40,7 @@ def extract_codonopt_data(filename) -> (str, float, list):
         for line in r:
             seqs.append(line.rstrip())
 
-    fitness_values, cps = _extract_builded_data(DB_DIR, organism)
+    fitness_values, cps = _extract_built_data(DB_DIR, organism)
     return fitness_values, cps, threshold, seqs
 
 
@@ -57,22 +57,23 @@ def extract_builder_data(filename) -> (str, str, str):
     return taxid, organism
 
 
-def _extract_builded_data(db_path: str, organism: str) -> (float, float):
+def _extract_built_data(db_path: str, organism: str) -> (float, float):
     """
-    Extracting information from db for optimization
+    Extracting built information from db for optimization
 
-    :param db_path: path do db
-    :param organism: organism
-    :return: fitness values, codon pair bias
+    :param db_path: path do database directory
+    :param organism: organism (name of directory with built data)
+    :return: fitness values, Codon Pair Score (CPS) table
     """
     file_cpb = join(db_path, organism, "cps.txt")
+
     cps_str = open(file_cpb).readlines()
     cps = []
     for i, line in enumerate(cps_str):
-        cps[i] = line.split(",")
+        cps.append(line.rstrip().split(","))
 
     file_fv = join(db_path, organism, "fv.txt")
     with open(file_fv) as f:
-        fitness_values = f.read().split(',')
+        fitness_values = f.read().rstrip().split(',')
 
     return fitness_values, cps

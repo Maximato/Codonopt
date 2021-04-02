@@ -13,15 +13,15 @@ except Exception as e:
     raise e
 
 
-def run_optimization(protein_seq: str, cpb: list, fitness_values: list, threshold: float) -> str:
+def run_optimization(protein_seq: str, cps: list, fitness_values: list, threshold: float) -> str:
     """
-    Take amino acid sequence of protein as input and mathematically optimize to DNA sequence. Fully based on MAXCPBstCAI
-    function from software implementation of approach described in "Codon Optimization: A Mathematical Programming
-    Approach" article. The function maximizes CPB (a parameter depending on the occurrence of codon pairs) when the CAI
-    (Codon Adaptation Index) does not fall below the specified value (threshold).
+    Take amino acid sequence of protein as input and mathematically optimize DNA sequence. Fully based on MAXCPBstCAI
+    function from software implementation of approach described in "Codon Optimization: A Mathematical Programming Approach"
+    article. The function maximizes Codon Pair Bias (CPB) index (that depends of the occurrence of codon pairs)
+    when the CAI (Codon Adaptation Index) does not fall below the specified value (threshold).
 
     :param protein_seq: sequence of protein for optimization
-    :param cpb: codon pairs bias table
+    :param cps: Codon Pair Score (CPS) table
     :param fitness_values: fitness values list
     :param threshold: the min value for CAI
     :return: string with DNA sequence, optimized for input protein
@@ -131,7 +131,7 @@ def run_optimization(protein_seq: str, cpb: list, fitness_values: list, threshol
             for k in range(len(CODONS)):
                 if (R[i, j] == 1 & R[i + 1, k] == 1):
                     Z[i, j, k] = m.addVar(vtype=GRB.BINARY, name="Z%s" % str([i, j, k]))
-                    coef[i, j, k] = cpb[j][k]
+                    coef[i, j, k] = cps[j][k]
 
     m.update()
 

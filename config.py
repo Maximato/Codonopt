@@ -4,11 +4,15 @@ from os.path import join
 logging.basicConfig(filename='.log', filemode='w', level=logging.ERROR)
 
 DB_DIR = "db"
-CODON_DB_PATH = join(DB_DIR, "codon_refseq.tsv")
-BICODON_DB_PATH = join(DB_DIR, "bicodon_refseq.tsv")
+CODON_DB = "codon_db.tsv"
+BICODON_DB = "bicodon_db.tsv"
 DB_COLUMN_DELIMITER = "\t"
-DB_CODON_FREQUENCY_START = 12
-DB_CODON_PAIR_FREQUENCY_START = 8
+DB_TAXID_INDEX = 0
+DB_CODON_FREQUENCY_START = 2
+DB_CODON_PAIR_FREQUENCY_START = 2
+
+CODON_DB_PATH = join(DB_DIR, CODON_DB)
+BICODON_DB_PATH = join(DB_DIR, BICODON_DB)
 
 
 """
