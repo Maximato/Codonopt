@@ -34,6 +34,9 @@ def calculate_cps(codon_frequencies: dict, codon_pair_frequencies: dict) -> dict
 
     aa_pairs_frequences = _calc_aa_pairs_frequencies(codon_pair_frequencies)
 
+    # zero value lead to error in logarithm calculations
+    _remove_zeros(codon_pair_frequencies)
+
     cps = {c: {} for c in CODONS}
     for c1 in CODONS:
         for c2 in CODONS:
@@ -43,11 +46,11 @@ def calculate_cps(codon_frequencies: dict, codon_pair_frequencies: dict) -> dict
     return cps
 
 
-def _calc_aa_pairs_frequencies(codon_pairs_frequencies):
+def _calc_aa_pairs_frequencies(codon_pair_frequencies: dict) -> dict:
     """
     Calculate amino acid pairs frequencies based on codon pairs frequencies.
 
-    :param codon_pairs_frequencies: codon pair frequencies dictionary
+    :param codon_pair_frequencies: codon pair frequencies dictionary
     :return: amino acid pair frequencies dictionary
     """
     aa_pair_frequencies = {a: {} for a in AMINOACIDS}
@@ -56,6 +59,19 @@ def _calc_aa_pairs_frequencies(codon_pairs_frequencies):
             aa_pair_frequency = 0
             for c1 in AA2CODON[a1]:
                 for c2 in AA2CODON[a2]:
-                    aa_pair_frequency += codon_pairs_frequencies[c1+c2]
+                    aa_pair_frequency += codon_pair_frequencies[c1 + c2]
             aa_pair_frequencies[a1+a2] = aa_pair_frequency
     return aa_pair_frequencies
+
+
+def _remove_zeros(codon_pair_frequencies: dict) -> dict:
+    """
+    Remove zeros from codon pair frequencies
+    :param codon_pair_frequencies: codon pair frequencies
+    :return: new codon pair frequencies
+    """
+    for key, value in codon_pair_frequencies.items():
+        if value == 0:
+            print(f"Warning! Zero codon pair frequency for {key}. Changed to 0.001")
+            codon_pair_frequencies[key] = 0.001
+    return codon_pair_frequencies

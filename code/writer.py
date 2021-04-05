@@ -15,9 +15,12 @@ def write_ordering_line(filename: str, data_1d: dict):
     :param filename: filename to write
     :param data_1d: 1 dimensional data
     """
+    codons_list = []
+    for codon in CODONS:
+        codons_list.append(str(data_1d[codon]))
+
     with open(filename, "w") as f:
-        for codon in CODONS:
-            f.write(str(data_1d[codon]) + ", ")
+        f.write(", ".join(codons_list))
 
 
 def write_ordering_matrix(filename: str, data_2d: dict):

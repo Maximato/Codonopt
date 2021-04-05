@@ -1,65 +1,41 @@
 ﻿## About
 
-Codonopt program is designed for codon optimization of protein sequences.  
-The core of it based on the mathematical codon optimization proposed  
-by  Alper Şen, Kamyar Kargar, Esma Akgün and Mustafa Çelebi Pınar in ["Codon optimization: A
-mathematical programming approach"](http://alpersen.bilkent.edu.tr/codonoptimization/CodonPaper.pdf) article.
-Codonopt is software that extend MAXCPBstCAI function by providing optimization of specified set of sequences.  
-Moreover, now it is available to build fitness values and Codon Pair Score (CPS) tables for your own organism  
-or from organism in database. To do this you need to create codon usage database for your organism  
-or download prepared codon usage database from [HIVE platform](https://hive.biochemistry.gwu.edu/cuts/about)  
-that contains a lot of organism.
-
+Codonopt program is designed for codon optimization of protein sequences. The core of it based on the mathematical codon optimization proposed by  Alper Şen, Kamyar Kargar, Esma Akgün and Mustafa Çelebi Pınar in [Codon optimization: A mathematical programming approach](http://alpersen.bilkent.edu.tr/codonoptimization/CodonPaper.pdf) article. Codonopt is software that extend `MAXCPBstCAI` function by providing optimization of specified set of sequences. Moreover, now it is available to build fitness values and Codon Pair Score (CPS) table for your own organism or for organism from database. To do this you need to create codon usage database for your organism or download prepared codon usage database from [HIVE platform](https://hive.biochemistry.gwu.edu/cuts/about) that contains a lot of organism.
 
 ### Installation
 
-To run the program Python version 3.8 (or higher) and Gurobi software are required.
-Two python packages is also needed: numpy (mathematical library) and gurobipy (Gurobi Optimization library).
-
-They can be installed with pip manager by commands:
+To run the program Python version 3.8 (or higher) and Gurobi software are required. Two python packages is also needed: numpy (mathematical library) and gurobipy (Gurobi Optimization library). They can be installed with pip manager by commands:
 
         pip install numpy    
         python -m pip install -i https://pypi.gurobi.com gurobipy
 
-
-
 ### codonopt.py script
 
-Read protein sequence (or set of protein sequences) from **codonopt_input.txt** and mathematically optimize for specific organism.
-It is fully based on `MAXCPBstCAI` function described in "Codon Optimization: A Mathematical Programming Approach" article.
-The function maximizes Codon Pair Bias (CPB) index (that depends of the occurrence of codon pairs)  
-when the CAI (Codon Adaptation Index) does not fall below the specified value (threshold).
+Read protein sequence (or set of protein sequences) from **codonopt_input.txt** and mathematically optimize for specific organism. It is fully based on `MAXCPBstCAI` function described in "Codon Optimization: A Mathematical Programming Approach" article. The function maximizes Codon Pair Bias (CPB) index (that depends of the occurrence of codon pairs) when the CAI (Codon Adaptation Index) does not fall below the specified value (threshold).
 
 To run this script you need to specify some values in **codonopt_input.txt** file:
-- organism --- organism for optimization. This value should match with directory name in database. That directory should contain with fitness values and CPS table (details in `builder.py` script information)
+- organism --- organism for optimization. This value should match with directory name in database. That directory should contain fitness values and CPS table (**fv.txt** and **cps.txt** files, details in **builder.py** script information)
 - minCAI --- threshold for CAI
-- sequences --- protein sequences
+- sequences --- protein sequences (on a new line each)
+
+There are several available organisms that was previously prepared (stored in **db** directory) and can be used for optimization (bacillus_anthracis, corynebacterium_diphtheriae, escherichia_coli, lactococcus_lactis, pseudomonas_syringae, staphylococcus_aureus, streptococcus_pneumoniae). If you want to run optimization for other organism you should build fitness values and Codon Pair Score table before (**builder.py** script).
 
 Example:
 
-        organism: ecoli
+        organism: escherichia_coli
         minCAI: 0.8
         PLKATSTPVSIKSTLLGGGSATVKFKYKGEELEVDISK
         LNIEDEHRLHETSKEPDVSLGSTWLSDFPQAWAETGGMGLAVRQAPLIIPLKATS
 
-
 Run **codonopt.py** script from command line. All results will be saved in **output.txt** file.
-
 
 ### builder.py script
 
-Builder script is designed to build fitness values and Codon Pair Score (CPS) tables for a specific taxid.  
-These values are calculated based on the Codon and Codon-Pair Usage Tables stored in the database  
-which must be created and configured to run the script.  
-The calculated fitness values and codon tables are saved in a separate  
-directory and can then be used for optimization protein sequences.  
-To do this, you must specify the name of the directory with data as the value **organism** in the **codonopt_input.txt** file.
+Builder script is designed to build fitness values and Codon Pair Score (CPS) table for a specific taxid. These values are calculated based on the Codon and Codon-Pair Usage Tables stored in the database which must be created and configured to run the script. The calculated fitness values and Codon Pair Score (CPS) table are saved in a separate directory and can then be used for optimization protein sequences. To do this, you must specify the name of the directory with calculated values (fitness values and Codon Pair Score (CPS) table) as the value **organism** in the **codonopt_input.txt** file.
 
 #### Running
 
-First of all you need to created and configured Codon and Codon-Pair Usage Tables files.
-This files can be downloaded from [HIVE platform](https://hive.biochemistry.gwu.edu/cuts/about) or created manually.
-It must contain taxid column and columns named as codon/codon-pair (see example).
+First of all you need to created and configured Codon and Codon-Pair Usage Tables files. This files can be downloaded from [HIVE platform](https://hive.biochemistry.gwu.edu/cuts/about) or created manually. It must contain taxid column and columns named as codon/codon-pair (see example).
 
 Codon usage example:
 
@@ -73,7 +49,7 @@ Codon pair usage example:
         2161	4450	50672	37181	9284 ...
         1204725	15631	40625	31317	1566 ...
 
-Then you need configure the files by specifying constants in **config.py** file:
+Then you need to configure the files by specifying constants in **config.py** file:
 - `DB_DIR` --- root directory for database ("db" default)
 - `CODON_DB` --- name codon usage file ("codon_db.tsv" default)
 - `BICODON_DB` --- name codon pair usage file ("bicodon_db.tsv" default)
@@ -82,16 +58,19 @@ Then you need configure the files by specifying constants in **config.py** file:
 - `DB_CODON_FREQUENCY_START` --- index of first column with frequencies in codon usage file (2 default)
 - `DB_CODON_PAIR_FREQUENCY_START` --- index of first column with frequencies in codon pair usage file (2 default)
 
-If there are some troubles with database creating you can use short  
-example Codon and Codon-Pair Usage Tables with some popular organisms.  
-This files come with Codonopt program (**codon_db.tsv** and **bicodon_db.tsv**) just use default configuration parameters.
+If there are some troubles with database creating you can use small example Codon and Codon-Pair Usage Tables with some organisms. This files come with Codonopt program (**codon_db.tsv** and **bicodon_db.tsv**) just use default configuration parameters.
 
-Besides, to run this script you need to specify some values in **builder_input.txt** file:
+Besides, to run **builder.py** script you need to specify some values in **builder_input.txt** file:
 
 - taxid --- taxid ID of organism that stored in the database.
-- organism --- name of directory to save fitness values and Codon Pair Score (CPS) table. This should be used as **organism** parameter to run optimization with built data.
+- organism --- name of directory to save fitness values and Codon Pair Score (CPS) table (without spaces). This should be used as **organism** parameter to run optimization with built data.
 
-Now you can run `builder.py` script from command line and check new built data in `DB_DIR` directory.
+Default configuration example:
+
+        taxid: 1359
+        organism: ecoli_test
+
+Now you can run **builder.py** script from command line and check new built data in `DB_DIR` directory.
 
 #### Built data
 
@@ -106,4 +85,3 @@ File **cps.txt** contains Codon Pair Score (CPS) of each codon pair in table (64
         -0.345,	-0.221,  0.125
         0.341,	 0.204,	-0.011
         0.272,	 0.225,	 0.364
-

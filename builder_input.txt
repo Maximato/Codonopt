@@ -1,2 +1,2 @@
-taxid: 562
-organism: test_ecoli
+taxid: 1359
+organism: ecoli_test
