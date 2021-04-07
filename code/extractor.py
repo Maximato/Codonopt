@@ -34,14 +34,15 @@ def extract_codonopt_data(filename) -> (str, float, list):
     """
     with open(filename, "r") as r:
         organism = r.readline().split()[1]
+        method = r.readline().split()[1]
         threshold = float(r.readline().split()[1])
 
         seqs = []
         for line in r:
             seqs.append(line.rstrip())
 
-    fitness_values, cps = _extract_built_data(DB_DIR, organism)
-    return fitness_values, cps, threshold, seqs
+    line_data, matrix_data = _extract_built_data(DB_DIR, organism, method)
+    return line_data, matrix_data, method, threshold, seqs
 
 
 def extract_builder_data(filename) -> (str, str, str):
@@ -57,23 +58,33 @@ def extract_builder_data(filename) -> (str, str, str):
     return taxid, organism
 
 
-def _extract_built_data(db_path: str, organism: str) -> (float, float):
+def _extract_built_data(db_path: str, organism: str, method: str) -> (list, list):
     """
     Extracting built information from db for optimization
 
     :param db_path: path do database directory
     :param organism: organism (name of directory with built data)
-    :return: fitness values, Codon Pair Score (CPS) table
+    :param method: method for optimization (MaxCPBstCAI or MinRCPBstRCB)
+    :return: line data (fitness values, observed frequencies), matrix data (CPS table, observed codon pair frequencies)
     """
-    file_cpb = join(db_path, organism, "cps.txt")
 
-    cps_str = open(file_cpb).readlines()
-    cps = []
-    for i, line in enumerate(cps_str):
-        cps.append(line.rstrip().split(","))
+    if method == "MaxCPBstCAI":
+        codon_data = "fv.txt"
+        codon_pair_data = "cps.txt"
+    elif method == "MinRCPBstRCB":
+        codon_data = "ocf.txt"
+        codon_pair_data = "opf.txt"
+    else:
+        raise Exception("Unknown method")
 
-    file_fv = join(db_path, organism, "fv.txt")
-    with open(file_fv) as f:
-        fitness_values = f.read().rstrip().split(',')
+    file_codon_data = join(db_path, organism, codon_data)
+    with open(file_codon_data) as f:
+        line_data = f.read().rstrip().split(',')
 
-    return fitness_values, cps
+    file_codon_pair_data = join(db_path, organism, codon_pair_data)
+    matrix_data_str = open(file_codon_pair_data).readlines()
+    matrix_data = []
+    for i, line in enumerate(matrix_data_str):
+        matrix_data.append(list(map(float, line.rstrip().split(","))))
+
+    return list(map(float, line_data)), matrix_data

@@ -46,6 +46,29 @@ def calculate_cps(codon_frequencies: dict, codon_pair_frequencies: dict) -> dict
     return cps
 
 
+def calculate_observed_codon_frequencies(codon_frequencies: dict) -> dict:
+    aa_frequencies = {}
+    for a in AMINOACIDS:
+        aa_frequencies[a] = sum([codon_frequencies[c] for c in AA2CODON[a]])
+
+    observed_frequencies = {}
+    for codon, frequency in codon_frequencies.items():
+        aa = CODON2AA[codon]
+        observed_frequencies[codon] = round(frequency / aa_frequencies[aa], 2)
+    return observed_frequencies
+
+
+def calculate_observed_pair_frequencies(codon_pair_frequencies: dict):
+    aa_pair_frequencies = _calc_aa_pairs_frequencies(codon_pair_frequencies)
+
+    observed_pair_frequencies = {c: {} for c in CODONS}
+    for c1 in CODONS:
+        for c2 in CODONS:
+            aa_pair = CODON2AA[c1] + CODON2AA[c2]
+            observed_pair_frequencies[c1][c2] = round(codon_pair_frequencies[c1+c2] / aa_pair_frequencies[aa_pair], 2)
+    return observed_pair_frequencies
+
+
 def _calc_aa_pairs_frequencies(codon_pair_frequencies: dict) -> dict:
     """
     Calculate amino acid pairs frequencies based on codon pairs frequencies.
@@ -53,7 +76,7 @@ def _calc_aa_pairs_frequencies(codon_pair_frequencies: dict) -> dict:
     :param codon_pair_frequencies: codon pair frequencies dictionary
     :return: amino acid pair frequencies dictionary
     """
-    aa_pair_frequencies = {a: {} for a in AMINOACIDS}
+    aa_pair_frequencies = {}
     for a1 in AMINOACIDS:
         for a2 in AMINOACIDS:
             aa_pair_frequency = 0
