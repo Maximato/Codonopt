@@ -1,2 +1,2 @@
-taxid: 1359
+taxid: 562
 organism: ecoli_test

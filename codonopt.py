@@ -3,17 +3,17 @@ from config import *
 from datetime import datetime
 
 from code.extractor import extract_codonopt_data
-from code.optimizer import MAXCPBstCAI_optimization, MinRCPBstRCB_optimization
+from code.optimizer import max_cpb_st_cai_optimization, min_rcpb_st_rcb_optimization
 
 try:
     line_data, matrix_data, method, threshold, seqs = extract_codonopt_data("codonopt_input.txt")
 
     if method == "MaxCPBstCAI":
-        run_optimization = MAXCPBstCAI_optimization
+        run_optimization = max_cpb_st_cai_optimization
     elif method == "MinRCPBstRCB":
-        run_optimization = MinRCPBstRCB_optimization
+        run_optimization = min_rcpb_st_rcb_optimization
     else:
-        raise Exception("Unknown method")
+        raise Exception(f"Unknown method {method}")
 
     with open("output.txt", "w") as w:
         w.write("last update: " + datetime.now().ctime() + "\n\n")

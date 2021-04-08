@@ -13,9 +13,9 @@ except Exception as e:
     raise e
 
 
-def MAXCPBstCAI_optimization(protein_seq: str, fitness_values: list, cps: list, threshold: float) -> str:
+def max_cpb_st_cai_optimization(protein_seq: str, fitness_values: list, cps: list, threshold: float) -> str:
     """
-    Take amino acid sequence of protein as input and mathematically optimize DNA sequence. Fully based on MAXCPBstCAI
+    Take amino acid sequence of protein as input and mathematically optimize DNA sequence. Fully based on MaxCPBstCAI
     function from software implementation of approach described in "Codon Optimization: A Mathematical Programming Approach"
     article. The function maximizes Codon Pair Bias (CPB) index (that depends of the occurrence of codon pairs)
     when the CAI (Codon Adaptation Index) does not fall below the specified value (threshold).
@@ -27,81 +27,20 @@ def MAXCPBstCAI_optimization(protein_seq: str, fitness_values: list, cps: list, 
     :return: string with DNA sequence, optimized for input protein
     """
     start_time = time.time()
-    array = list(protein_seq)
-    N = len(array)
+    aminoacids = list(protein_seq)
+    N = len(aminoacids)
 
-    aminoacids = [0] * N
-    for i in range(N):
-        aminoacids[i] = array[i]
-
-    # Y matrix whose entry yij  is equal to 1 if ith amino acid in the protein is the j th amino acid in our list.
-    Y = np.zeros((N, len(AMINOACIDS)), dtype=np.int)
-    for i in range(len(aminoacids)):
-        for j in range(len(AMINOACIDS)):
-            if aminoacids[i] == AMINOACIDS[j]:
-                Y[i, j] = 1
-
-    test2 = np.sum(Y, axis=1)
+    Y = _create_Y(aminoacids)
 
     # M matrix whose entry mjk  is equal to 1 if jth amino acid can be represented by codon k.
+    test2 = np.sum(Y, axis=1)
     if len(test2) != N:
         print('warning! there exists undefined AA letter abbreviation')
 
-    # M matrix whose entry mjk  is equal to 1 if jth amino acid can be represented by codon k.
-    M = np.zeros((len(AMINOACIDS), len(CODONS)), dtype=np.int)
-    M[0, 0:3] = [1, 1, 1]
-    M[1, 3:9] = [1, 1, 1, 1, 1, 1]
-    M[2, 9:13] = [1, 1, 1, 1]
-    M[3, 13:15] = [1, 1]
-    M[4, 15:16] = [1]
-    M[5, 16:18] = [1, 1]
-    M[6, 18:22] = [1, 1, 1, 1]
-    M[7, 22:26] = [1, 1, 1, 1]
-    M[8, 26:30] = [1, 1, 1, 1]
-    M[9, 30:34] = [1, 1, 1, 1]
-    M[10, 34:40] = [1, 1, 1, 1, 1, 1]
-    M[11, 40:42] = [1, 1]
-    M[12, 42:43] = [1]
-    M[13, 43:45] = [1, 1]
-    M[14, 45:47] = [1, 1]
-    M[15, 47:49] = [1, 1]
-    M[16, 49:51] = [1, 1]
-    M[17, 51:53] = [1, 1]
-    M[18, 53:55] = [1, 1]
-    M[19, 55:61] = [1, 1, 1, 1, 1, 1]
-    M[20, 61:64] = [1, 1, 1]
+    M = _create_M()
+    R = _create_R(aminoacids, M)
 
-    # R matrix for possible codonset of amino acids in the protein
-    R = np.zeros((len(aminoacids), len(CODONS)), dtype=np.int)
-    for i in range(len(aminoacids)):
-        for j in range(len(AMINOACIDS)):
-            if aminoacids[i] == AMINOACIDS[j]:
-                R[i] = M[j]
-                break
-
-    logFitnessValues = np.zeros(64, dtype=np.double)
-    for i in range(len(fitness_values)):
-        logFitnessValues[i] = np.log(float(fitness_values[i]))
-
-    # %%###################################Build the Model##################################################################
-    m = Model("Codon Optimization")
-
-    # Variable Xik=1 if ith amino acid of the protein is assigned to k th codon
-    X = {}
-    for i in range(len(aminoacids)):
-        for j in range(len(CODONS)):
-            if R[i, j] == 1:
-                X[i, j] = m.addVar(vtype=GRB.BINARY, name="X%s" % str([i, j]))
-    m.update()
-
-    # Constraint that every aminoacid is assigned to exactly one codon
-    for i in range(len(aminoacids)):
-        xvar = []
-        for j in range(len(CODONS)):
-            if R[i, j] == 1:
-                xvar.append(j)
-        m.addConstr(sum(X[i, k] * R[i, k] for k in xvar), GRB.EQUAL, 1)
-    m.update()
+    model, X = _create_model(aminoacids, R)
 
     # Variable Zijk=1 if codon pair jk is used for amino acids i and i+1
     coef = {}
@@ -109,11 +48,10 @@ def MAXCPBstCAI_optimization(protein_seq: str, fitness_values: list, cps: list, 
     for i in range(len(aminoacids) - 1):
         for j in range(len(CODONS)):
             for k in range(len(CODONS)):
-                if (R[i, j] == 1 & R[i + 1, k] == 1):
-                    Z[i, j, k] = m.addVar(vtype=GRB.BINARY, name="Z%s" % str([i, j, k]))
+                if R[i, j] == 1 & R[i + 1, k] == 1:
+                    Z[i, j, k] = model.addVar(vtype=GRB.BINARY, name="Z%s" % str([i, j, k]))
                     coef[i, j, k] = cps[j][k]
-
-    m.update()
+    model.update()
 
     for i in range(len(aminoacids) - 1):
         jvar = []
@@ -124,33 +62,26 @@ def MAXCPBstCAI_optimization(protein_seq: str, fitness_values: list, cps: list, 
         for k in range(len(CODONS)):
             if R[i + 1, k] == 1:
                 kvar.append(k)
-        m.addConstr(sum(Z[i, l, n] for l in jvar for n in kvar), GRB.EQUAL, 1)
+        model.addConstr(sum(Z[i, l, n] for l in jvar for n in kvar), GRB.EQUAL, 1)
         for l in jvar:
             for n in kvar:
-                m.addConstr(X[i, l] + X[i + 1, n] >= 2 * Z[i, l, n])
-                m.addConstr(X[i, l] + X[i + 1, n] <= Z[i, l, n] + 1)
-
-    m.update()
+                model.addConstr(X[i, l] + X[i + 1, n] >= 2 * Z[i, l, n])
+                model.addConstr(X[i, l] + X[i + 1, n] <= Z[i, l, n] + 1)
+    model.update()
 
     minCAI = N * math.log(threshold)
-
-    m.addConstr(sum(X[i, j] * logFitnessValues[j] for (i, j) in X), GRB.GREATER_EQUAL, minCAI)
-    m.update()
+    logFitnessValues = np.zeros(64, dtype=np.double)
+    for i in range(len(fitness_values)):
+        logFitnessValues[i] = np.log(fitness_values[i])
+    model.addConstr(sum(X[i, j] * logFitnessValues[j] for (i, j) in X), GRB.GREATER_EQUAL, minCAI)
+    model.update()
 
     # Set objective function
     obj = sum(Z[i, j, k] * coef[i, j, k] for (i, j, k) in Z) / (N - 1)
+    model.setObjective(obj, GRB.MAXIMIZE)
+    model.optimize()
 
-    m.setObjective(obj, GRB.MAXIMIZE)
-
-    m.optimize()
-    if m.status == GRB.Status.OPTIMAL:
-        print('\nobjective function value: %g' % m.objVal)
-
-    objValue = m.objVal
-
-    for v in m.getVars():
-        if v.x >= 1:
-            print('%s %g' % (v.varName, v.x))
+    objValue = model.objVal
 
     codons = [j for (i, j) in X if X[i, j].X == 1]
     ans = ""
@@ -162,7 +93,7 @@ def MAXCPBstCAI_optimization(protein_seq: str, fitness_values: list, cps: list, 
     return f"Objective function value: {objValue}\n" + ans + "\n"
 
 
-def MinRCPBstRCB_optimization(protein_seq: str, freq_codons: list, freq_codon_pair: list, threshold: float):
+def min_rcpb_st_rcb_optimization(protein_seq: str, freq_codons: list, freq_codon_pair: list, threshold: float):
     """
     Take amino acid sequence of protein as input and mathematically optimize DNA sequence. Fully based on MinRCPBstRCB
     function from software implementation of approach described in "Codon Optimization: A Mathematical Programming Approach"
@@ -181,7 +112,41 @@ def MinRCPBstRCB_optimization(protein_seq: str, freq_codons: list, freq_codon_pa
     aminoacids = list(protein_seq)
     N = len(aminoacids)
 
-    model, Y, M, R, X, Z = _create_model(aminoacids)
+    Y = _create_Y(aminoacids)
+
+    # M matrix whose entry mjk  is equal to 1 if jth amino acid can be represented by codon k.
+    test2 = np.sum(Y, axis=1)
+    if len(test2) != N:
+        print('warning! there exists undefined AA letter abbreviation')
+
+    M = _create_M()
+    R = _create_R(aminoacids, M)
+
+    model, X = _create_model(aminoacids, R)
+
+    Z = {}
+    for i in range(len(aminoacids) - 1):
+        for j in range(len(CODONS)):
+            for k in range(len(CODONS)):
+                if R[i, j] == 1 and R[i + 1, k] == 1:
+                    Z[i, j, k] = model.addVar(vtype=GRB.BINARY, name="Z%s" % str([i, j, k]))
+    model.update()
+
+    for i in range(len(aminoacids) - 1):
+        jvar = []
+        kvar = []
+        for j in range(len(CODONS)):
+            if R[i, j] == 1:
+                jvar.append(j)
+        for k in range(len(CODONS)):
+            if R[i + 1, k] == 1:
+                kvar.append(k)
+        model.addConstr(sum(Z[i, l, n] for l in jvar for n in kvar), GRB.EQUAL, 1)
+        for l in jvar:
+            for m in kvar:
+                model.addConstr(X[i, l] + X[i + 1, m] >= 2 * Z[i, l, m])
+                model.addConstr(X[i, l] + X[i + 1, m] <= Z[i, l, m] + 1)
+    model.update()
 
     codondev = {}
     for i in range(len(CODONS)):
@@ -278,18 +243,10 @@ def MinRCPBstRCB_optimization(protein_seq: str, freq_codons: list, freq_codon_pa
                     NumAApairs[j, k] = NumAApairs[j, k] + 1
 
     obj = 100 * sum(AApairdev[i, j] * NumAApairs[i, j] for (i, j) in AApairdev)
-
     model.setObjective(obj, GRB.MINIMIZE)
     model.optimize()
 
     objValue = model.objVal / (100 * (N - 1))
-
-    if model.status == GRB.Status.OPTIMAL:
-        print('\nobjective function value: %g' % objValue)
-
-    for v in model.getVars():
-        if v.x >= 1:
-            print('%s %g' % (v.varName, v.x))
 
     # Write codons into the file
     codons = [(j) for (i, j) in X if X[i, j].X == 1]
@@ -303,22 +260,18 @@ def MinRCPBstRCB_optimization(protein_seq: str, freq_codons: list, freq_codon_pa
     return f"Objective function value: {objValue}\n" + ans + "\n"
 
 
-def _create_model(aminoacids):
-    N = len(aminoacids)
-
+def _create_Y(aminoacids):
     # Y matrix whose entry yij  is equal to 1 if ith amino acid in the protein is the j th amino acid in our list.
+    N = len(aminoacids)
     Y = np.zeros((N, len(AMINOACIDS)), dtype=np.int)
     for i in range(len(aminoacids)):
         for j in range(len(AMINOACIDS)):
             if aminoacids[i] == AMINOACIDS[j]:
                 Y[i, j] = 1
+    return Y
 
-    test2 = np.sum(Y, axis=1)
 
-    # M matrix whose entry mjk  is equal to 1 if jth amino acid can be represented by codon k.
-    if len(test2) != N:
-        print('warning! there exists undefined AA letter abbreviation')
-
+def _create_M():
     # M matrix whose entry mjk  is equal to 1 if jth amino acid can be represented by codon k.
     M = np.zeros((len(AMINOACIDS), len(CODONS)), dtype=np.int)
     M[0, 0:3] = [1, 1, 1]
@@ -342,7 +295,10 @@ def _create_model(aminoacids):
     M[18, 53:55] = [1, 1]
     M[19, 55:61] = [1, 1, 1, 1, 1, 1]
     M[20, 61:64] = [1, 1, 1]
+    return M
 
+
+def _create_R(aminoacids, M):
     # R matrix for possible codonset of amino acids in the protein
     R = np.zeros((len(aminoacids), len(CODONS)), dtype=np.int)
     for i in range(len(aminoacids)):
@@ -350,17 +306,20 @@ def _create_model(aminoacids):
             if aminoacids[i] == AMINOACIDS[j]:
                 R[i] = M[j]
                 break
+    return R
 
+
+def _create_model(aminoacids, R):
     # Build the Model
-    m = Model("Codon Optimization")
+    model = Model("Codon Optimization")
 
     # Variable Xik=1 if ith amino acid of the protein is assigned to k th codon
     X = {}
     for i in range(len(aminoacids)):
         for j in range(len(CODONS)):
             if R[i, j] == 1:
-                X[i, j] = m.addVar(vtype=GRB.BINARY, name="X%s" % str([i, j]))
-    m.update()
+                X[i, j] = model.addVar(vtype=GRB.BINARY, name="X%s" % str([i, j]))
+    model.update()
 
     # Constraint that every aminoacid is assigned to exactly one codon
     for i in range(len(aminoacids)):
@@ -368,31 +327,6 @@ def _create_model(aminoacids):
         for j in range(len(CODONS)):
             if R[i, j] == 1:
                 xvar.append(j)
-        m.addConstr(sum(X[i, k] * R[i, k] for k in xvar), GRB.EQUAL, 1)
-    m.update()
-
-    # Variable Zijk=1 if codon pair jk is used for amino acids i and i+1
-    Z = {}
-    for i in range(len(aminoacids) - 1):
-        for j in range(len(CODONS)):
-            for k in range(len(CODONS)):
-                if R[i, j] == 1 & R[i + 1, k] == 1:
-                    Z[i, j, k] = m.addVar(vtype=GRB.BINARY, name="Z%s" % str([i, j, k]))
-    m.update()
-
-    for i in range(len(aminoacids) - 1):
-        jvar = []
-        kvar = []
-        for j in range(len(CODONS)):
-            if R[i, j] == 1:
-                jvar.append(j)
-        for k in range(len(CODONS)):
-            if R[i + 1, k] == 1:
-                kvar.append(k)
-        m.addConstr(sum(Z[i, l, n] for l in jvar for n in kvar), GRB.EQUAL, 1)
-        for l in jvar:
-            for n in kvar:
-                m.addConstr(X[i, l] + X[i + 1, n] >= 2 * Z[i, l, n])
-                m.addConstr(X[i, l] + X[i + 1, n] <= Z[i, l, n] + 1)
-    m.update()
-    return m, Y, M, R, X, Z
+        model.addConstr(sum(X[i, k] * R[i, k] for k in xvar), GRB.EQUAL, 1)
+    model.update()
+    return model, X

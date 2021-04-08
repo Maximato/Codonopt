@@ -75,7 +75,7 @@ def _extract_built_data(db_path: str, organism: str, method: str) -> (list, list
         codon_data = "ocf.txt"
         codon_pair_data = "opf.txt"
     else:
-        raise Exception("Unknown method")
+        raise Exception(f"Unknown method {method}")
 
     file_codon_data = join(db_path, organism, codon_data)
     with open(file_codon_data) as f:
